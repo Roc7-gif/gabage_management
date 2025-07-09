@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoWiz - Gestion des Déchets 3D</title>
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #00e1ff;
+            --neon-yellow: #fff01f;
+            --neon-red: #ff073a;
+            --dark-bg: #0f0f1a;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: var(--dark-bg);
+            color: white;
+            margin: 0;
+            overflow-x: hidden;
+            perspective: 1000px;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(90deg, rgba(57,255,20,0.1) 0%, rgba(0,225,255,0.1) 100%);
+            border-bottom: 1px solid rgba(0,225,255,0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin: 0;
+            background: linear-gradient(90deg, var(--neon-green), var(--neon-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0,225,255,0.3);
+        }
+
+        .trash-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 3rem;
+            padding: 2rem;
+            transform-style: preserve-3d;
+        }
+
+        .trash-can {
+            width: 180px;
+            height: 250px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+            cursor: pointer;
+        }
+
+        .trash-can:hover {
+            transform: translateY(-10px) rotateX(10deg);
+        }
+
+        .can-body {
+            position: absolute;
+            width: 100%;
+            height: 80%;
+            bottom: 0;
+            border-radius: 10px 10px 5px 5px;
+            transform-origin: bottom;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .can-lid {
+            position: absolute;
+            width: 110%;
+            height: 20%;
+            top: 0;
+            left: -5%;
+            border-radius: 10px 10px 0 0;
+            transform-origin: bottom;
+            transform: rotateX(0deg);
+            transition: transform 0.5s ease;
+            box-shadow: 0 -5px 10px rgba(0,0,0,0.3);
+            z-index: 3;
+        }
+
+        .trash-can.open .can-lid {
+            transform: rotateX(-90deg);
+        }
+
+        .fill-level {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.7);
+            transition: height 1s ease;
+            z-index: 1;
+        }
+
+        .trash-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            z-index: 2;
+        }
+
+        .trash-info {
+            position: absolute;
+            bottom: 15px;
+            z-index: 999;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .counter {
+            font-size: 1.5rem;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        /* Déchet animé */
+        .trash-item {
+            position: absolute;
+            font-size: 1.5rem;
+            z-index: 0;
+            opacity: 0;
+            transition: none;
+        }
+
+        /* Couleurs spécifiques */
+        .organic {
+            --color: var(--neon-green);
+        }
+        .recyclable {
+            --color: var(--neon-blue);
+        }
+        .plastic {
+            --color: var(--neon-yellow);
+        }
+        .hazardous {
+            --color: var(--neon-red);
+        }
+
+        .organic .can-body, .organic .can-lid {
+            background: linear-gradient(135deg, var(--neon-green), #1e7a1e);
+            border: 2px solid var(--neon-green);
+        }
+        .recyclable .can-body, .recyclable .can-lid {
+            background: linear-gradient(135deg, var(--neon-blue), #0066cc);
+            border: 2px solid var(--neon-blue);
+        }
+        .plastic .can-body, .plastic .can-lid {
+            background: linear-gradient(135deg, var(--neon-yellow), #cc9900);
+            border: 2px solid var(--neon-yellow);
+        }
+        .hazardous .can-body, .hazardous .can-lid {
+            background: linear-gradient(135deg, var(--neon-red), #990000);
+            border: 2px solid var(--neon-red);
+        }
+
+        .organic .fill-level {
+            background: linear-gradient(to top, #1e7a1e, var(--neon-green));
+        }
+        .recyclable .fill-level {
+            background: linear-gradient(to top, #0066cc, var(--neon-blue));
+        }
+        .plastic .fill-level {
+            background: linear-gradient(to top, #cc9900, var(--neon-yellow));
+        }
+        .hazardous .fill-level {
+            background: linear-gradient(to top, #990000, var(--neon-red));
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px 5px rgba(57, 255, 20, 0.5); }
+            50% { box-shadow: 0 0 20px 10px rgba(57, 255, 20, 0.8); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes throwTrash {
+            0% { 
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(0) rotate(180deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translateY(50px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Dashboard */
+        .dashboard {
+            background: rgba(15, 15, 26, 0.7);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 225, 255, 0.2);
+        }
+
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .trash-container {
+                gap: 1.5rem;
+            }
+            .trash-can {
+                width: 140px;
+                height: 200px;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particles" class="particles"></canvas>
+    
+    <div class="header">
+        <h1>ECOWIZ ♻</h1>
+        <p>Système de gestion des déchets intelligent</p>
+    </div>
+
+    <div class="trash-container">
+        <div class="trash-can organic" id = 'vertpoubelle' data-type="vert" data-count="0">
+                <div class="can-body">
+                    <div class="fill-level" style="height: 0%"></div>
+                </div>
+                <div class="can-lid"></div>
+                <div class="trash-icon">🍃</div>
+                <div class="trash-info">
+                    Organique
+
+                <br>
+
+            <span class="counter" id = 'vert'>0</span>
+                </div>
+        </div>
+
+        <div class="trash-can recyclable" id = 'bleupoubelle' data-type="bleu" data-count="0">
+            <div class="can-body">
+                <div class="fill-level" style="height: 0%"></div>
+            </div>
+            <div class="can-lid"></div>
+            <div class="trash-icon">♻</div>
+            <div class="trash-info">
+                Recyclable<br>
+                <span class="counter " id = 'bleu'>0</span>
+            </div>
+        </div>
+
+        <div class="trash-can plastic" id = 'jaunepoubelle' data-type="jaune" data-count="0">
+            <div class="can-body">
+                <div class="fill-level" style="height: 0%"></div>
+            </div>
+            <div class="can-lid"></div>
+            <div class="trash-icon">🧴</div>
+            <div class="trash-info">
+                Plastique<br>
+                <span class="counter " id = "jaune">0</span>
+            </div>
+        </div>
+
+        <div class="trash-can hazardous" id = 'rougepoubelle' data-type="rouge" data-count="0">
+            <div class="can-body">
+                <div class="fill-level" style="height: 0%"></div>
+            </div>
+            <div class="can-lid"></div>
+            <div class="trash-icon">☠️</div>
+            <div class="trash-info">
+                Dangereux<br>
+                <span id = 'rouge' class="counter">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <canvas id="statsChart"></canvas>
+    </div>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+      import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBGG9RiZ5mnAnVv7853JbD4mEF3BZwsehU",
+        authDomain: "teckbot-3d020.firebaseapp.com",
+        databaseURL: "https://teckbot-3d020-default-rtdb.firebaseio.com",
+        projectId: "teckbot-3d020",
+        storageBucket: "teckbot-3d020.firebasestorage.app",
+        messagingSenderId: "941671051313",
+        appId: "1:941671051313:web:6aa6d5467f9590b995a510"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+
+      const canvas = document.getElementById('particles');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      let particles = [];
+      class Particle {
+        constructor() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.size = Math.random() * 3 + 1;
+          this.speedX = Math.random() * 1 - 0.5;
+          this.speedY = Math.random() * 1 - 0.5;
+          this.color = `hsl(${Math.random() * 60 + 180}, 100%, 50%)`;
+        }
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+          if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+        }
+        draw() {
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function initParticles() {
+        for (let i = 0; i < 100; i++) particles.push(new Particle());
+      }
+      function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let p of particles) p.update(), p.draw();
+        requestAnimationFrame(animateParticles);
+      }
+
+      const trashData = { vert: 0, bleu: 0, jaune: 0, rouge: 0 };
+      const trashIcons = {
+        vert: ['🍎', '🥦', '🍌', '🥕', '🌿'],
+        bleu: ['📰', '📦', '🥫', '🍶', '♻'],
+        jaune: ['🧴', '🥤', '🍶', '🛍️', '📌'],
+        rouge: ['☢️', '☠️', '⚠️', '🧪', '💊']
+      };
+
+      const statsChart = new Chart(document.getElementById('statsChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Vert', 'Bleu', 'Jaune', 'Rouge'],
+          datasets: [{
+            label: 'Nombre de déchets',
+            data: [0, 0, 0, 0],
+            backgroundColor: ['#39ff14', '#00e1ff', '#fff01f', '#ff073a'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+            x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+          },
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Répartition des déchets', color: 'white', font: { family: 'Orbitron', size: 18 } }
+          }
+        }
+      });
+
+      function updateChart() {
+        statsChart.data.datasets[0].data = [trashData.vert, trashData.bleu, trashData.jaune, trashData.rouge];
+        statsChart.update();
+      }
+
+      function updateTrashCan(can, type, count) {
+        can.dataset.count = count;
+        can.querySelector('.counter').textContent = count;
+      }
+
+      function createParticles(container, type) {
+        const colors = { vert: '#39ff14', bleu: '#00e1ff', jaune: '#fff01f', rouge: '#ff073a' };
+        for (let i = 0; i < 10; i++) {
+          const p = document.createElement('div');
+          Object.assign(p.style, {
+            position: 'absolute', width: '8px', height: '8px', backgroundColor: colors[type],
+            borderRadius: '50%', left: `${Math.random() * 100}%`, bottom: '100%', opacity: '0.8',
+            filter: 'blur(1px)', transform: 'translateZ(0)', zIndex: '10'
+          });
+          container.appendChild(p);
+          p.animate([
+            { bottom: '100%', opacity: 0.8 },
+            { bottom: `${Math.random() * 30 + 70}%`, opacity: 0 }
+          ], { duration: 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' }).onfinish = () => p.remove();
+        }
+      }
+
+      function simulateTrashThrow(type, newValue) {
+        const bin = document.querySelector(`.trash-can[data-type="${type}"]`);
+        if (!bin) return;
+        const icon = trashIcons[type][Math.floor(Math.random() * trashIcons[type].length)];
+        const item = document.createElement('div');
+        item.className = 'trash-item';
+        item.textContent = icon;
+        item.style.left = `${Math.random() * 80 + 10}%`;
+        bin.querySelector('.can-body').appendChild(item);
+        item.style.animation = 'throwTrash 1s forwards';
+        trashData[type] = newValue;
+        updateTrashCan(bin, type, newValue);
+        updateChart();
+        animateCounter(bin.querySelector('.counter'), newValue);
+        const fill = bin.querySelector('.fill-level');
+        fill.style.height = `${Math.min(100, newValue * 10)}%`;
+        createParticles(bin.querySelector('.can-body'), type);
+        setTimeout(() => item.remove(), 400);
+      }
+
+      function animateCounter(element, target) {
+        element.textContent = target;
+      }
+
+      function ecouterDechets() {
+        const dechetsRef = ref(database, 'dechets');
+        onValue(dechetsRef, (snapshot) => {
+          if (!snapshot.exists()) return;
+          const data = snapshot.val();
+          for (let type in data) {
+            const value = data[type];
+            if (trashData[type] !== value) {
+              simulateTrashThrow(type, value);
+            }
+          }
+        });
+      }
+
+      initParticles();
+      animateParticles();
+      ecouterDechets();
+    </script>
+        </body>
+</html>
