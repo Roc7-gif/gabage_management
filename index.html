@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROBOSTIM - Plateforme Convoyeur </title>
+    <title>ROBOSTIM - Gestion des Déchets 3D</title>
     <style>
         :root {
             --neon-green: #39ff14;
@@ -34,6 +34,7 @@
             padding: 2rem;
             background: linear-gradient(90deg, rgba(57,255,20,0.1) 0%, rgba(0,225,255,0.1) 100%);
             border-bottom: 1px solid rgba(0,225,255,0.3);
+            max-height: 30vh;
         }
 
         .header h1 {
@@ -44,6 +45,12 @@
             background-clip: text;
             color: transparent;
             text-shadow: 0 0 10px rgba(0,225,255,0.3);
+            position: relative;
+            top: -5vh;
+        }
+        .header p{
+            position: relative;
+            top: -5vh;
         }
 
         .trash-container {
@@ -53,6 +60,7 @@
             gap: 3rem;
             padding: 2rem;
             transform-style: preserve-3d;
+            
         }
 
         .trash-can {
@@ -241,11 +249,47 @@
     </style>
 </head>
 <body>
+        
     <canvas id="particles" class="particles"></canvas>
     
+    <style>
+        .logo{
+            width: 100%;
+            height: 15vh;
+                display: flex;
+            flex-wrap: wrap ; 
+            justify-content: center;
+            gap :40vw;
+        }
+        .logo .logo-left{
+            width: 16vw;
+
+        }
+        .logo .logo-right{
+            width: 16vw;
+
+        }
+        .logo .logo-left img{
+         border-radius: 50%;
+        }
+         .logo .logo-right img{
+         border-radius:50%;
+        }
+    </style>
     <div class="header">
-        <h1>ROBOSTIM</h1>
-        <p>Système de gestion des déchets intelligent</p>
+        <div class="logo">
+            <div class="logo-left">
+               <img src="images/tekbot.png" width="100%" alt="">
+            </div>
+<div class="logo-right">
+    <img src="images/trc.png" alt="" width="100%">
+</div>
+            <div class="logo-img">
+                
+            </div>
+        </div>
+        <h1>ROBOSTIM ♻</h1>
+        <p>Système de gestion des déchets </p>
     </div>
 
     <div class="trash-container">
@@ -422,6 +466,7 @@
       function simulateTrashThrow(type, newValue) {
         const bin = document.querySelector(`.trash-can[data-type="${type}"]`);
         if (!bin) return;
+        bin.classList.add('open')
         const icon = trashIcons[type][Math.floor(Math.random() * trashIcons[type].length)];
         const item = document.createElement('div');
         item.className = 'trash-item';
@@ -436,6 +481,8 @@
         const fill = bin.querySelector('.fill-level');
         fill.style.height = `${Math.min(100, newValue * 10)}%`;
         createParticles(bin.querySelector('.can-body'), type);
+        bin.classList.remove('open')
+
         setTimeout(() => item.remove(), 400);
       }
 
